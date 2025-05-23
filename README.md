@@ -72,7 +72,7 @@ pip install -r requirements.txt
 ### Main Version
 
 ```bash
-python3 filterupdate.py -d <device> -u <username> -p <password> -a <as-set> -l <prefix-list-name> [-6] [-s <irr-server>] [--port <port>] [--use-bgpq4] [--test]
+python3 filterupdate.py -d <device> -u <username> -p <password> -a <as-set> -l <prefix-list-name> [-6] [-s <irr-server>] [--port <port>] [--use-bgpq4] [--test] [--verbose]
 ```
 
 ### Lightweight Version (no device connection)
@@ -93,7 +93,8 @@ python3 filterupdate_lite.py -a <as-set> -l <prefix-list-name> [-6] [-s <irr-ser
 - `-s`: (Optional) IRR server to query (default: rr.ntt.net)
 - `--port`: (Optional) SSH port (default: 22)
 - `--use-bgpq4`: (Optional) Use bgpq4 instead of direct IRR query
-- `--test`: (Optional) Test mode: output configuration to stderr without applying to device
+- `--test`: (Optional) Test mode: output configuration without applying to device
+- `--verbose`: (Optional) Show detailed debug output during execution
 
 #### For Lightweight Version:
 - `-a`: AS-SET to create prefix list from (e.g., AS-EXAMPLE)
@@ -121,10 +122,16 @@ Using bgpq4:
 python3 filterupdate.py -d router.example.com -u admin -p password -a AS-EXAMPLE -l customer-prefixes --use-bgpq4
 ```
 
-Test mode (outputs to stderr without applying to device):
+Test mode (outputs configuration without applying to device):
 
 ```bash
-python3 filterupdate.py -d router.example.com -u admin -p password -a AS-EXAMPLE -l customer-prefixes --test
+python3 filterupdate.py -a AS-EXAMPLE -l customer-prefixes --test
+```
+
+Verbose mode (shows detailed debug output):
+
+```bash
+python3 filterupdate.py -a AS-EXAMPLE -l customer-prefixes --test --verbose
 ```
 
 Using the lightweight version:
@@ -141,9 +148,10 @@ python3 filterupdate_lite.py -a AS-EXAMPLE -l customer-prefixes -o config.txt
    - Use bgpq4 if the `--use-bgpq4` option is specified
 2. It parses the response to extract prefixes associated with the specified AS-SET
 3. It generates a Juniper-compatible prefix list configuration
-4. In test mode (`--test`), it outputs the configuration to stderr and exits
+4. In test mode (`--test`), it outputs the configuration and exits
 5. In normal mode, it connects to the specified Juniper device using Netmiko
 6. It loads and commits the configuration, replacing the existing prefix list
+7. In verbose mode (`--verbose`), it shows detailed debug information during execution
 
 ### Lightweight Version
 1. The tool can either:
@@ -165,6 +173,7 @@ python3 filterupdate_lite.py -a AS-EXAMPLE -l customer-prefixes -o config.txt
 | IRR Query Method | Direct socket connection or bgpq4 | Direct socket connection or bgpq4 |
 | Query Robustness | Basic or bgpq4 | Basic or bgpq4 |
 | Test Capability | Yes | Always (generates config only) |
+| Debug Output | Controlled with --verbose | Always minimal |
 
 ## License
 
