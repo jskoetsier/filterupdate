@@ -1,1 +1,6 @@
-junos-eznc>=2.6.0
+# Dependencies for main version (filterupdate.py)
+netmiko>=4.0.0
+paramiko>=2.7.0
+scp>=0.13.0
+
+# No additional dependencies for filterupdate_lite.py
