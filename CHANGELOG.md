@@ -1,5 +1,14 @@
 # Changelog
 
+## [1.0.1] - 2026-01-17
+
+### Fixed
+- Fixed missing `logger` definition in `filterupdate_lite.py` that caused NameError on execution.
+- Fixed file handle bug in `get_config_with_bgpq4()` in lite version where subprocess wrote to a closed file handle.
+- Fixed missing imports in `setup.py` (`subprocess`, `platform`, `argparse`).
+- Fixed incorrect `Path.write()` call in `filterupdate.py` - changed to `Path.write_text()`.
+- Removed erroneous `sys.exit(2)` at end of `main()` in `filterupdate.py` that incorrectly signaled failure.
+
 ## [1.0.0] - 2026-01-17
 
 ### Added
@@ -18,5 +27,3 @@
 ### Fixed
 - Fixed potential resource leaks in subprocess calls.
 - Ensured consistent logging configuration across modules.
-
-```

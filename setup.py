@@ -3,11 +3,10 @@
 Modern setup script for filterupdate tool using setuptools.
 """
 
-import pathlib
+import argparse
+import platform
+import subprocess
 import sys
-from typing import List
-
-from setuptools import find_packages, setup
 
 def check_python_version() -> None:
     """Check if Python version is 3.8 or higher."""

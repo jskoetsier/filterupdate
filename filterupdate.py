@@ -311,10 +311,8 @@ def get_config_with_bgpq4(
                     else:
                         stdout = result.stdout
 
-                    config_file.write(stdout)
-
-                    with open(config_file, "r") as fin:
-                        config_content = fin.read()
+                    config_file.write_text(stdout)
+                    config_content = config_file.read_text()
 
                     if verbose:
                         logger.debug("bgpq4 output length: %d bytes", len(config_content))
@@ -622,7 +620,6 @@ def main() -> None:
         port=port,
         verbose=verbose,
     )
-    sys.exit(2)
 
 
 if __name__ == "__main__":

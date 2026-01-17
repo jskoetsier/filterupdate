@@ -16,6 +16,11 @@ import tempfile
 from pathlib import Path
 from typing import List, Optional
 
+# Configure logging
+logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
+logger = logging.getLogger(__name__)
+
+
 class IRRQuerier:
     """Class to query IRR databases for prefix information."""
 
@@ -93,15 +98,17 @@ def get_config_with_bgpq4(
     irr_server: str,
 ) -> Optional[str]:
     """Use bgpq4 to generate the configuration."""
-    with tempfile.NamedTemporaryFile(mode="w+", delete=False) as outfile:
-        config_file = Path(outfile.name)
+    fd, temp_path = tempfile.mkstemp()
+    config_file = Path(temp_path)
+    os.close(fd)
 
     try:
         cmd = ["bgpq4", "-J", asset, "-l", prefixlist, "-h", irr_server]
         if ipv6:
             cmd.append("-6")
 
-        subprocess.run(cmd, stdout=outfile, check=True)
+        with open(config_file, "w") as outfile:
+            subprocess.run(cmd, stdout=outfile, check=True)
         with open(config_file, "r") as fin:
             config_content = fin.read()
         config_file.unlink(missing_ok=True)
