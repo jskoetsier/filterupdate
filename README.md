@@ -167,7 +167,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## Author
 
-(c) 2019 - Sebastiaan Koetsier
+(c) 2026 - Sebastiaan Koetsier
 
 ## Recent Updates
 
