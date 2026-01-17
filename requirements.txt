@@ -1,6 +1,6 @@
 # Dependencies for main version (filterupdate.py)
-netmiko>=4.0.0
-paramiko>=2.7.0
-scp>=0.13.0
+netmiko>=5.0.0
+paramiko>=3.0.0
+scp>=0.14.0
 
 # No additional dependencies for filterupdate_lite.py

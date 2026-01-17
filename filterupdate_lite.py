@@ -1,130 +1,137 @@
 #!/usr/bin/env python3
 """
-Lightweight version of filterupdate that doesn't require device connection libraries.
-This version can query IRR databases and generate configurations,
-but cannot apply them directly to devices.
+Lightweight version of filterupdate that generates prefix lists from IRR databases
+without requiring device connection libraries. Modernized with pathlib, type hints,
+logging, and subprocess.run.
 """
 
 import argparse
+import logging
 import os
 import re
 import socket
 import subprocess
 import sys
 import tempfile
-
+from pathlib import Path
+from typing import List, Optional
 
 class IRRQuerier:
     """Class to query IRR databases for prefix information."""
 
-    def __init__(self, server="rr.ntt.net", port=43):
-        """Initialize with the IRR server to query."""
+    def __init__(self, server: str = "rr.ntt.net", port: int = 43) -> None:
+        """
+        Initialize with the IRR server to query.
+
+        Args:
+            server: IRR server hostname or IP address.
+            port: Port number for the IRR query.
+        """
         self.server = server
         self.port = port
 
-    def _send_query(self, query):
-        """Send a query to the IRR server and return the response."""
+    def _send_query(self, query: str) -> str:
+        """Send a query to the IRR server and return the response as a string."""
         try:
-            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            sock.connect((self.server, self.port))
-            sock.sendall(f"{query}\n".encode())
-
-            # Receive the response
-            response = b""
-            while True:
-                data = sock.recv(4096)
-                if not data:
-                    break
-                response += data
-
-            sock.close()
-            return response.decode("utf-8", errors="ignore")
-        except Exception as e:
-            print(f"Error querying IRR server: {e}")
+            with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
+                sock.connect((self.server, self.port))
+                sock.sendall(f"{query}\n".encode())
+                response = b""
+                while True:
+                    data = sock.recv(4096)
+                    if not data:
+                        break
+                    response += data
+                return response.decode("utf-8", errors="ignore")
+        except Exception as exc:
+            logger.error("Error querying IRR server: %s", exc)
             return ""
 
-    def get_prefixes_for_asset(self, asset, ipv6=False):
+    def get_prefixes_for_asset(self, asset: str, ipv6: bool = False) -> List[str]:
         """Get prefixes for an AS-SET."""
         query_type = "6" if ipv6 else "4"
         query = f"!{query_type}{asset}"
-
         response = self._send_query(query)
-        prefixes = []
+        prefixes: List[str] = []
 
-        # Parse the response to extract prefixes
         for line in response.splitlines():
             line = line.strip()
             if not line or line.startswith("%") or line.startswith("!"):
                 continue
 
-            # Basic validation for IPv4/IPv6 prefixes
             if ipv6:
-                # Very basic IPv6 CIDR validation
                 if ":" in line and "/" in line:
                     prefixes.append(line)
             else:
-                # Very basic IPv4 CIDR validation
                 if re.match(r"^\d+\.\d+\.\d+\.\d+/\d+$", line):
                     prefixes.append(line)
 
         return prefixes
 
-    def generate_juniper_config(self, prefixes, prefix_list_name, ipv6=False):
+    def generate_juniper_config(self, prefixes: List[str], prefix_list_name: str, ipv6: bool = False) -> str:
         """Generate Juniper configuration for the prefix list."""
         family = "inet6" if ipv6 else "inet"
         config_lines = [
-            f"policy-options {{\n",
-            f"    replace:\n",
-            f"    prefix-list {prefix_list_name} {{\n",
+            "policy-options {",
+            "    replace:",
+            f"    prefix-list {prefix_list_name} {{",
         ]
 
         for prefix in prefixes:
-            config_lines.append(f"        {prefix};\n")
+            config_lines.append(f"        {prefix};")
 
-        config_lines.append("    }\n")
-        config_lines.append("}\n")
+        config_lines.append("    }")
+        config_lines.append("}")
 
-        return "".join(config_lines)
+        return "\n".join(config_lines)
 
 
-def get_config_with_bgpq4(asset, prefixlist, ipv6, irr_server):
+def get_config_with_bgpq4(
+    asset: str,
+    prefixlist: str,
+    ipv6: bool,
+    irr_server: str,
+) -> Optional[str]:
     """Use bgpq4 to generate the configuration."""
     with tempfile.NamedTemporaryFile(mode="w+", delete=False) as outfile:
-        config_file = outfile.name
+        config_file = Path(outfile.name)
 
     try:
         cmd = ["bgpq4", "-J", asset, "-l", prefixlist, "-h", irr_server]
         if ipv6:
             cmd.append("-6")
 
-        with open(config_file, "w") as outfile:
-            subprocess.call(cmd, stdout=outfile)
-
+        subprocess.run(cmd, stdout=outfile, check=True)
         with open(config_file, "r") as fin:
             config_content = fin.read()
-
-        os.remove(config_file)
+        config_file.unlink(missing_ok=True)
         return config_content
-    except Exception as e:
-        print(f"Error using bgpq4: {e}")
-        if os.path.exists(config_file):
-            os.remove(config_file)
+    except Exception as exc:
+        logger.error("Error using bgpq4: %s", exc)
+        if config_file.exists():
+            config_file.unlink()
         return None
 
 
-def get_config_with_direct_query(asset, prefixlist, ipv6, irr_server):
+def get_config_with_direct_query(
+    asset: str,
+    prefixlist: str,
+    ipv6: bool,
+    irr_server: str,
+) -> Optional[str]:
     """Use direct IRR query to generate the configuration."""
     irr = IRRQuerier(server=irr_server)
     prefixes = irr.get_prefixes_for_asset(asset, ipv6)
 
     if not prefixes:
-        print("Error: No prefixes found for the specified AS-SET")
+        logger.error("Error: No prefixes found for the specified AS-SET")
         return None
 
-    return irr.generate_juniper_config(prefixes, prefixlist, ipv6)
+    irr_obj = IRRQuerier(server=irr_server)
+    return irr_obj.generate_juniper_config(prefixes, prefixlist, ipv6)
 
 
-def main():
+def main() -> None:
     parser = argparse.ArgumentParser(
         description="Lightweight tool to generate prefix lists from IRR databases"
     )
@@ -184,37 +191,34 @@ def main():
     prefixlist = args.prefixlist
     ipv6 = args.ipv6
     irr_server = args.irr_server
-    use_bgpq4 = args.use_bgpq4
     output_file = args.output_file
+    use_bgpq4 = args.use_bgpq4
 
-    print(f"Generating prefix list for {asset}...")
+    logger.info("Generating prefix list for %s...", asset)
 
-    # Generate configuration based on method
     if use_bgpq4:
-        print("~ Starting bgpq4 ...")
+        logger.info("~ Starting bgpq4 ...")
         config_content = get_config_with_bgpq4(asset, prefixlist, ipv6, irr_server)
     else:
-        print("~ Starting direct IRR query ...")
-        config_content = get_config_with_direct_query(
-            asset, prefixlist, ipv6, irr_server
-        )
+        logger.info("~ Starting direct IRR query ...")
+        config_content = get_config_with_direct_query(asset, prefixlist, ipv6, irr_server)
 
     if not config_content:
-        print("Error: Failed to generate configuration")
+        logger.error("Error: Failed to generate configuration")
         sys.exit(1)
 
-    # Output the configuration
     if output_file:
-        with open(output_file, "w") as f:
-            f.write(config_content)
-        print(f"Configuration written to {output_file}")
+        Path(output_file).write_text(config_content)
+        logger.info("Configuration written to %s", output_file)
     else:
         print("\n" + config_content)
 
-    print("\nNote: This is a lightweight version that only generates configurations.")
-    print("To apply this configuration to a device, you need to:")
-    print("1. Save the output to a file")
-    print("2. Use the Juniper CLI or another tool to apply the configuration")
+    logger.info(
+        "Note: This is a lightweight version that only generates configurations.\n"
+        "To apply this configuration to a device, you need to:\n"
+        "1. Save the output to a file\n"
+        "2. Use the Juniper CLI or another tool to apply the configuration"
+    )
 
 
 if __name__ == "__main__":

@@ -1,10 +1,11 @@
 # Filterupdate
 
-A Python tool for automatic BGP prefix filter updates on Juniper devices. This tool queries IRR databases for prefixes associated with AS-SETs and applies them to Juniper devices.
+A Python tool for automatic BGP prefix filter updates on Juniper devices.  
+This tool queries IRR databases for prefixes associated with AS-SETs and applies them to Juniper devices.
 
 ## Requirements
 
-- Python 3.6 or higher (Python 3.12 compatible)
+- Python 3.8 or higher (Python 3.12 compatible)
 - Netmiko library for device connections
 - (Optional) bgpq4 command-line tool for more robust IRR queries
 
@@ -19,11 +20,13 @@ python3 setup.py
 ```
 
 For the lightweight version (no device connection):
+
 ```bash
 python3 setup.py --lite
 ```
 
 This script will:
+
 - Check your Python version
 - Install the required Python packages
 - Check if bgpq4 is installed and provide installation instructions if needed
@@ -46,18 +49,15 @@ pip install -r requirements.txt
      ```bash
      sudo port install bgpq4
      ```
-
    - On Debian/Ubuntu:
      ```bash
      sudo apt-get install bgpq4
      ```
-
    - On CentOS/RHEL:
      ```bash
      sudo yum install epel-release
      sudo yum install bgpq4
      ```
-
    - From source:
      ```bash
      git clone https://github.com/bgp/bgpq4.git
@@ -104,39 +104,25 @@ python3 filterupdate_lite.py -a <as-set> -l <prefix-list-name> [-6] [-s <irr-ser
 - `--use-bgpq4`: (Optional) Use bgpq4 instead of direct IRR query
 - `-o`: (Optional) Output file (default: stdout)
 
-### Example:
+### Examples
 
 ```bash
+# Basic usage (IPv4)
 python3 filterupdate.py -d router.example.com -u admin -p password -a AS-EXAMPLE -l customer-prefixes
-```
 
-For IPv6:
-
-```bash
+# IPv6 usage
 python3 filterupdate.py -d router.example.com -u admin -p password -a AS-EXAMPLE -l customer-prefixes-v6 -6
-```
 
-Using bgpq4:
-
-```bash
+# Using bgpq4 for robust queries
 python3 filterupdate.py -d router.example.com -u admin -p password -a AS-EXAMPLE -l customer-prefixes --use-bgpq4
-```
 
-Test mode (outputs configuration without applying to device):
-
-```bash
+# Test mode (outputs configuration without applying)
 python3 filterupdate.py -a AS-EXAMPLE -l customer-prefixes --test
-```
 
-Verbose mode (shows detailed debug output):
-
-```bash
+# Verbose mode (shows detailed debug output)
 python3 filterupdate.py -a AS-EXAMPLE -l customer-prefixes --test --verbose
-```
 
-Using the lightweight version:
-
-```bash
+# Using the lightweight version
 python3 filterupdate_lite.py -a AS-EXAMPLE -l customer-prefixes -o config.txt
 ```
 
@@ -165,7 +151,7 @@ python3 filterupdate_lite.py -a AS-EXAMPLE -l customer-prefixes -o config.txt
 ## Version Comparison
 
 | Feature | Main Version | Lightweight Version |
-|---------|-------------|---------------------|
+|---------|--------------|---------------------|
 | External Dependencies | Optional (can use bgpq4 or not) | Optional (can use bgpq4 or not) |
 | Device Library | Netmiko | None |
 | Python 3.12 Compatible | Yes | Yes |
@@ -177,8 +163,29 @@ python3 filterupdate_lite.py -a AS-EXAMPLE -l customer-prefixes -o config.txt
 
 ## License
 
-This project is licensed under the MIT License - see the [license.txt](license.txt) file for details.
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
 ## Author
 
 (c) 2019 - Sebastiaan Koetsier
+
+## Recent Updates
+
+- **Modernized codebase** to use `pathlib`, type hints, `logging`, and `subprocess.run`.
+- **Updated dependencies** to latest stable versions.
+- **Refactored** both `filterupdate.py` and `filterupdate_lite.py` for better readability and maintainability.
+- **Enhanced** error handling and logging throughout.
+
+## Example Output (Verbose Mode)
+
+```
+2026-01-17 15:20:01,123 - INFO - Starting bgpq4 (recommended method)...
+2026-01-17 15:20:02,456 - INFO - Successfully generated configuration
+2026-01-17 15:20:02,789 - INFO - Connecting to router.example.com
+2026-01-17 15:20:03,001 - INFO - Entering configuration mode
+2026-01-17 15:20:03,123 - INFO - Locking configuration
+2026-01-17 15:20:03,456 - INFO - Loading prefixlist configuration
+2026-01-17 15:20:03,789 - INFO - Committing the configuration
+2026-01-17 15:20:04,001 - INFO - Exiting configuration mode
+2026-01-17 15:20:04,123 - INFO - Disconnecting from device
+2026-01-17 15:20:04,234 - INFO - Configuration update completed successfully
